@@ -143,7 +143,7 @@ function AdminDashboard() {
             </thead>
             <tbody>
               {bookings.map((booking) => (
-                <tr key={booking._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <tr key={booking._id} data-testid="booking-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '1rem' }}>
                     <div style={{ fontWeight: 'bold' }}>{booking.name}</div>
                     <div style={{ fontSize: '0.85rem', color: '#00ffcc' }}>{booking.serviceName}</div>
@@ -157,6 +157,7 @@ function AdminDashboard() {
                   </td>
                   <td style={{ padding: '1rem' }}>
                     <select 
+                      data-testid="assign-worker"
                       value={booking.assignedWorker || 'Unassigned'} 
                       onChange={(e) => handleAssignWorker(booking._id, e.target.value)}
                       disabled={updatingId === booking._id}
@@ -179,12 +180,14 @@ function AdminDashboard() {
                     {editAmountId === booking._id ? (
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <input 
+                          data-testid="input-amount"
                           type="number" 
                           value={tempAmount} 
                           onChange={(e) => setTempAmount(e.target.value)}
                           style={{ width: '80px', padding: '0.3rem', borderRadius: '4px', border: '1px solid #00ffcc', background: '#000', color: '#fff' }}
                         />
                         <button 
+                          data-testid="btn-save-amount"
                           onClick={() => handleUpdateAmount(booking._id)}
                           style={{ background: '#2ed573', border: 'none', borderRadius: '4px', color: '#000', padding: '0.3rem 0.5rem', fontSize: '0.8rem', cursor: 'pointer' }}
                         >
@@ -199,6 +202,7 @@ function AdminDashboard() {
                       </div>
                     ) : (
                       <div 
+                        data-testid="amount-display"
                         onClick={() => {
                           setEditAmountId(booking._id);
                           setTempAmount(booking.totalAmount || 0);
@@ -220,6 +224,7 @@ function AdminDashboard() {
                         Details
                       </button>
                       <button 
+                        data-testid="btn-notify"
                         className="premium-btn" 
                         style={{ 
                           padding: '0.4rem 0.6rem', 
