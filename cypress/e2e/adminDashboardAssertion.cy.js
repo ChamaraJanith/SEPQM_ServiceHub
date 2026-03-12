@@ -1,14 +1,9 @@
 // cypress/e2e/adminDashboardAssertion.cy.js
 
 describe('Admin happy path - assign worker, set price, notify user', () => {
-  let bookingData;
-
-  before(() => {
-    cy.fixture('bookingData').then((data) => {
-      bookingData = data;
-    });
-
-    // register admin once
+  // register admin once before all tests
+  before(function () {
+    // registration may fail if already created, ignore failure
     cy.request({
       method: 'POST',
       url: 'http://localhost:5000/api/auth/register',
@@ -17,7 +12,7 @@ describe('Admin happy path - assign worker, set price, notify user', () => {
     });
   });
 
-  beforeEach(() => {
+  beforeEach(function () {
     // login before every test so localStorage is fresh
     cy.visit('http://localhost:5173/login');
     cy.intercept('POST', '**/api/auth/login').as('loginRequest');
@@ -26,27 +21,30 @@ describe('Admin happy path - assign worker, set price, notify user', () => {
     cy.get('button[type="submit"]').click();
 
     // wait for login and grab token from response
-    cy.wait('@loginRequest', { timeout: 15000 }).then((interception) => {
+    cy.wait('@loginRequest', { timeout: 15000 }).then(function (interception) {
       expect(interception.response.statusCode).to.eq(200);
       const token = interception.response.body.token;
       expect(token).to.be.a('string');
 
       // create a fresh booking via API each time using fixture data
-      cy.request({
-        method: 'POST',
-        url: 'http://localhost:5000/api/bookings',
-        headers: { Authorization: `Bearer ${token}` },
-        body: {
-          serviceSlug: bookingData.bookingUser.serviceSlug,
-          serviceName: bookingData.bookingUser.serviceName,
-          name: bookingData.bookingUser.name,
-          email: `client+${Date.now()}@example.com`,
-          date: bookingData.bookingUser.date,
-          timeSlot: bookingData.bookingUser.timeSlot,
-          address: bookingData.bookingUser.address,
-          lat: bookingData.bookingUser.lat,
-          lng: bookingData.bookingUser.lng
-        }
+      cy.fixture('bookingData').then((data) => {
+        const b = data.bookingUser;
+        cy.request({
+          method: 'POST',
+          url: 'http://localhost:5000/api/bookings',
+          headers: { Authorization: `Bearer ${token}` },
+          body: {
+            serviceSlug: b.serviceSlug,
+            serviceName: b.serviceName,
+            name: b.name,
+            email: `client+${Date.now()}@example.com`,
+            date: b.date,
+            timeSlot: b.timeSlot,
+            address: b.address,
+            lat: b.lat,
+            lng: b.lng
+          }
+        });
       });
     });
 
