@@ -19,20 +19,25 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
-      - name: Install dependencies
+      # Install frontend deps
+      - name: Install frontend deps
+        working-directory: .
         run: npm install
 
-      # Run backend + frontend together
+      # Install backend deps
+      - name: Install backend deps
+        working-directory: ./backend
+        run: npm install
+
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
-          # start both servers in parallel
+          working-directory: .
           start: |
-            npm run server
+            cd backend && npm start
             npm run dev
-          # wait until both API and UI are up
           wait-on: 'http://127.0.0.1:5000, http://127.0.0.1:5173'
           wait-on-timeout: 120
           browser: chrome
