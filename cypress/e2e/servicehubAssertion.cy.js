@@ -1,6 +1,22 @@
 // cypress/e2e/servicehubAssertion.cy.js
 
 describe('ServiceHub E2E - home, register, booking', () => {
+  let bookingData;
+
+  before(() => {
+    cy.fixture('bookingData').then((data) => {
+      bookingData = data;
+    });
+  });
+
+  beforeEach(() => {
+    cy.log('Setting up test environment');
+  });
+
+  afterEach(() => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+  });
 
   it('home page loads', () => {
     cy.visit('http://localhost:5173/')
@@ -17,9 +33,9 @@ describe('ServiceHub E2E - home, register, booking', () => {
   it('register api returns 201', () => {
     cy.visit('http://localhost:5173/register')
     cy.intercept('POST', '**/api/auth/register').as('registerApi')
-    cy.get('input[name="name"]').type('Test User')
+    cy.get('input[name="name"]').type(bookingData.registerUser.name)
     cy.get('input[name="email"]').type('testuser+' + Date.now() + '@example.com')
-    cy.get('input[name="password"]').type('Password123!')
+    cy.get('input[name="password"]').type(bookingData.registerUser.password)
     cy.get('button[type="submit"]').click()
     cy.wait('@registerApi').its('response.statusCode').should('eq', 201)
   })
@@ -33,17 +49,15 @@ describe('ServiceHub E2E - home, register, booking', () => {
 
   it('user can pick date from calendar and fill booking fields', () => {
     cy.visit('http://localhost:5173/book?service=ac-repair')
-    cy.get('[data-testid="input-name"]').type('Booking User')
-    cy.get('[data-testid="input-email"]').type('booking@example.com')
-    cy.get('.datepicker-input').click()
-    cy.contains('.react-datepicker__day', '15').click()
+    cy.get('[data-testid="input-name"]').type(bookingData.bookingUser.name)
+    cy.get('[data-testid="input-email"]').type(bookingData.bookingUser.email)
+    cy.get('.datepicker-input').type(bookingData.bookingUser.date)
     cy.get('body').click(0,0)
-    cy.get('[data-testid="select-timeslot"]').select('Morning')
-    
-    // Manual Address Set
+    cy.get('[data-testid="select-timeslot"]').select(bookingData.bookingUser.timeSlot)
+
     cy.window().then(win => {
       const addressInput = win.document.querySelector('input[name="address"]')
-      addressInput.value = '123 Test Street, Colombo'
+      addressInput.value = bookingData.bookingUser.address
       addressInput.dispatchEvent(new win.Event('input', { bubbles: true }))
     })
 
@@ -66,15 +80,11 @@ describe('ServiceHub E2E - home, register, booking', () => {
     cy.get('input[name="address"]').should('have.value', 'Test Address')
   })
 
-  // --- THE FIXED API TESTS ---
-
   it('shows error message when booking API fails', () => {
-    // 1. Stub the fetch globally so we don't rely on AuthContext logic
     cy.visit('http://localhost:5173/book?service=ac-repair', {
       onBeforeLoad(win) {
         win.localStorage.setItem('token', 'valid-token')
-        // Force the app to think a user is logged in
-        win.localStorage.setItem('user', JSON.stringify({ name: 'Error User' }))
+        win.localStorage.setItem('user', JSON.stringify({ name: bookingData.errorUser.name }))
       }
     })
 
@@ -83,16 +93,18 @@ describe('ServiceHub E2E - home, register, booking', () => {
       body: { message: 'Database connection failed' }
     }).as('bookingError')
 
-    cy.get('[data-testid="input-name"]').clear().type('Error User')
-    cy.get('[data-testid="input-email"]').clear().type('error@example.com')
-    cy.get('.datepicker-input').type('2026-06-20')
+    cy.get('[data-testid="input-name"]').clear().type(bookingData.errorUser.name)
+    cy.get('[data-testid="input-email"]').clear().type(bookingData.errorUser.email)
+    cy.get('.datepicker-input').type(bookingData.errorUser.date)
     cy.get('body').click(0,0)
-    cy.get('[data-testid="select-timeslot"]').select('Afternoon')
+    cy.get('[data-testid="select-timeslot"]').select(bookingData.errorUser.timeSlot)
 
-    // Ensure Address passes validation (min 5 chars)
     cy.window().then(win => {
       const input = win.document.querySelector('input[name="address"]')
-      Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(input, '123 Error Lane St')
+      Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(
+        input,
+        bookingData.errorUser.address
+      )
       input.dispatchEvent(new win.Event('input', { bubbles: true }))
     })
 
@@ -105,38 +117,34 @@ describe('ServiceHub E2E - home, register, booking', () => {
     cy.visit('http://localhost:5173/book?service=ac-repair', {
       onBeforeLoad(win) {
         win.localStorage.setItem('token', 'valid-token')
-        win.localStorage.setItem('user', JSON.stringify({ name: 'PDF User' }))
+        win.localStorage.setItem('user', JSON.stringify({ name: bookingData.pdfUser.name }))
       }
     })
 
-    // FIX: Provide a valid JSON body {} so res.json() succeeds
-    cy.intercept('POST', '**/api/bookings', { 
+    cy.intercept('POST', '**/api/bookings', {
       statusCode: 200,
-      body: { success: true, message: 'Booking saved' } 
+      body: { success: true, message: 'Booking saved' }
     }).as('bookingSuccess')
 
-    cy.get('[data-testid="input-name"]').clear().type('PDF User')
-    cy.get('[data-testid="input-email"]').clear().type('pdf@example.com')
-    cy.get('.datepicker-input').type('2026-06-20')
+    cy.get('[data-testid="input-name"]').clear().type(bookingData.pdfUser.name)
+    cy.get('[data-testid="input-email"]').clear().type(bookingData.pdfUser.email)
+    cy.get('.datepicker-input').type(bookingData.pdfUser.date)
     cy.get('body').click(0,0)
-    cy.get('[data-testid="select-timeslot"]').select('Morning')
+    cy.get('[data-testid="select-timeslot"]').select(bookingData.pdfUser.timeSlot)
 
     cy.window().then(win => {
       const input = win.document.querySelector('input[name="address"]')
-      Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(input, 'Valid PDF Address')
+      Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(
+        input,
+        bookingData.pdfUser.address
+      )
       input.dispatchEvent(new win.Event('input', { bubbles: true }))
     })
 
     cy.get('[data-testid="submit-booking"]').click()
-    
     cy.wait('@bookingSuccess')
-
-    // This should now be found because the JS didn't crash!
     cy.get('[data-testid="booking-success"]', { timeout: 10000 }).should('be.visible')
-    
     cy.contains('Download Official PDF').click()
-    
-    // Verify the file exists
     cy.readFile('cypress/downloads/booking-confirmation.pdf').should('exist')
   })
 })

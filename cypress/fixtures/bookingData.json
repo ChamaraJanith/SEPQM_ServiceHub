@@ -1,0 +1,31 @@
+{
+  "bookingUser": {
+    "serviceSlug": "ac-repair",
+    "serviceName": "AC Repair",
+    "name": "Booking User",
+    "email": "booking@example.com",
+    "date": "2026-06-20",
+    "timeSlot": "Morning",
+    "address": "123 Test Street, Colombo",
+    "lat": 6.9,
+    "lng": 79.8
+  },
+  "errorUser": {
+    "name": "Error User",
+    "email": "error@example.com",
+    "date": "2026-06-20",
+    "timeSlot": "Afternoon",
+    "address": "123 Error Lane St"
+  },
+  "pdfUser": {
+    "name": "PDF User",
+    "email": "pdf@example.com",
+    "date": "2026-06-20",
+    "timeSlot": "Morning",
+    "address": "Valid PDF Address"
+  },
+  "registerUser": {
+    "name": "Test User",
+    "password": "Password123!"
+  }
+}

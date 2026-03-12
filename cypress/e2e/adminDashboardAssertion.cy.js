@@ -1,8 +1,13 @@
 // cypress/e2e/adminDashboardAssertion.cy.js
 
 describe('Admin happy path - assign worker, set price, notify user', () => {
+  let bookingData;
 
   before(() => {
+    cy.fixture('bookingData').then((data) => {
+      bookingData = data;
+    });
+
     // register admin once
     cy.request({
       method: 'POST',
@@ -19,27 +24,28 @@ describe('Admin happy path - assign worker, set price, notify user', () => {
     cy.get('input[name="email"]').type('admin@gmail.com');
     cy.get('input[name="password"]').type('admin@123');
     cy.get('button[type="submit"]').click();
+
     // wait for login and grab token from response
     cy.wait('@loginRequest', { timeout: 15000 }).then((interception) => {
       expect(interception.response.statusCode).to.eq(200);
       const token = interception.response.body.token;
       expect(token).to.be.a('string');
 
-      // create a fresh booking via API each time using the token
+      // create a fresh booking via API each time using fixture data
       cy.request({
         method: 'POST',
         url: 'http://localhost:5000/api/bookings',
         headers: { Authorization: `Bearer ${token}` },
         body: {
-          serviceSlug: 'ac-repair',
-          serviceName: 'AC Repair',
-          name: 'Test Client',
+          serviceSlug: bookingData.bookingUser.serviceSlug,
+          serviceName: bookingData.bookingUser.serviceName,
+          name: bookingData.bookingUser.name,
           email: `client+${Date.now()}@example.com`,
-          date: '2026-06-20',
-          timeSlot: 'Morning',
-          address: '100 Test St, Colombo',
-          lat: 6.9,
-          lng: 79.8
+          date: bookingData.bookingUser.date,
+          timeSlot: bookingData.bookingUser.timeSlot,
+          address: bookingData.bookingUser.address,
+          lat: bookingData.bookingUser.lat,
+          lng: bookingData.bookingUser.lng
         }
       });
     });
@@ -54,7 +60,11 @@ describe('Admin happy path - assign worker, set price, notify user', () => {
     cy.get('[data-testid="booking-row"]').first().as('firstBooking');
   });
 
-  // the booking is created in beforeEach; this test can be removed or kept as sanity
+  afterEach(() => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+  });
+
   it('has a booking row available', () => {
     cy.get('[data-testid="booking-row"]').should('exist');
   });
@@ -85,5 +95,4 @@ describe('Admin happy path - assign worker, set price, notify user', () => {
       'Success: Email notification sent to user!'
     );
   });
-
 });
