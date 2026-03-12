@@ -3,22 +3,21 @@
 describe('Admin happy path - assign worker, set price, notify user', () => {
   // register admin once before all tests
   before(function () {
-    // attempt to register admin; if server isn't listening skip the suite
-    cy.request({
-      method: 'POST',
-      url: 'http://localhost:5000/api/auth/register',
-      failOnStatusCode: false,
-      body: { name: 'Admin', email: 'admin@gmail.com', password: 'admin@123' }
-    }).then(
-      () => {
-        // request succeeded or returned non-2xx; nothing to do
-      },
-      (err) => {
-        // network-level failure (server down/unreachable)
-        cy.log('registration request failed, skipping admin tests:', err.message);
+    // if backend isn't running, skip entire suite early
+    cy.task('checkServer', 'http://localhost:5000').then((isUp) => {
+      if (!isUp) {
+        cy.log('backend not reachable, skipping admin suite');
         this.skip();
+        return;
       }
-    );
+      // server is reachable – perform registration (ignore any errors)
+      cy.request({
+        method: 'POST',
+        url: 'http://localhost:5000/api/auth/register',
+        failOnStatusCode: false,
+        body: { name: 'Admin', email: 'admin@gmail.com', password: 'admin@123' }
+      });
+    });
   });
 
   beforeEach(function () {
