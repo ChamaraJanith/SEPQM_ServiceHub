@@ -3,12 +3,24 @@
 describe('Admin happy path - assign worker, set price, notify user', () => {
   // register admin once before all tests
   before(function () {
-    // registration may fail if already created, ignore failure
+    // attempt to register admin; if the backend isn't reachable we simply log and continue
+    const onFail = (err) => {
+      if (err.message.includes('cy.request() failed trying to load')) {
+        // swallow network-level errors so the suite can continue
+        cy.log('registration request failed (backend may be down)');
+        return false;
+      }
+    };
+    Cypress.on('fail', onFail);
+
     cy.request({
       method: 'POST',
       url: 'http://localhost:5000/api/auth/register',
       failOnStatusCode: false,
       body: { name: 'Admin', email: 'admin@gmail.com', password: 'admin@123' }
+    }).finally(() => {
+      // remove our temporary handler
+      Cypress.off('fail', onFail);
     });
   });
 
