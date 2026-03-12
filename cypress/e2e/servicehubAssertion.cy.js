@@ -1,12 +1,10 @@
 // cypress/e2e/servicehubAssertion.cy.js
 
 describe('ServiceHub E2E - home, register, booking', () => {
-  let bookingData;
-
+  // load common data once and alias it so each spec can refer via `this.bookingData`
+  // no longer alias fixture globally; each test will load it as needed
   before(() => {
-    cy.fixture('bookingData').then((data) => {
-      bookingData = data;
-    });
+    cy.log('loading bookingData fixture');
   });
 
   beforeEach(() => {
@@ -31,13 +29,15 @@ describe('ServiceHub E2E - home, register, booking', () => {
   })
 
   it('register api returns 201', () => {
-    cy.visit('http://localhost:5173/register')
-    cy.intercept('POST', '**/api/auth/register').as('registerApi')
-    cy.get('input[name="name"]').type(bookingData.registerUser.name)
-    cy.get('input[name="email"]').type('testuser+' + Date.now() + '@example.com')
-    cy.get('input[name="password"]').type(bookingData.registerUser.password)
-    cy.get('button[type="submit"]').click()
-    cy.wait('@registerApi').its('response.statusCode').should('eq', 201)
+    cy.fixture('bookingData').then((data) => {
+      cy.visit('http://localhost:5173/register');
+      cy.intercept('POST', '**/api/auth/register').as('registerApi');
+      cy.get('input[name="name"]').type(data.registerUser.name);
+      cy.get('input[name="email"]').type('testuser+' + Date.now() + '@example.com');
+      cy.get('input[name="password"]').type(data.registerUser.password);
+      cy.get('button[type="submit"]').click();
+      cy.wait('@registerApi').its('response.statusCode').should('eq', 201);
+    });
   })
 
   it('shows validation errors when required fields are missing', () => {
@@ -48,21 +48,24 @@ describe('ServiceHub E2E - home, register, booking', () => {
   })
 
   it('user can pick date from calendar and fill booking fields', () => {
-    cy.visit('http://localhost:5173/book?service=ac-repair')
-    cy.get('[data-testid="input-name"]').type(bookingData.bookingUser.name)
-    cy.get('[data-testid="input-email"]').type(bookingData.bookingUser.email)
-    cy.get('.datepicker-input').type(bookingData.bookingUser.date)
-    cy.get('body').click(0,0)
-    cy.get('[data-testid="select-timeslot"]').select(bookingData.bookingUser.timeSlot)
+    cy.fixture('bookingData').then((data) => {
+      const b = data.bookingUser;
+      cy.visit('http://localhost:5173/book?service=ac-repair');
+      cy.get('[data-testid="input-name"]').type(b.name);
+      cy.get('[data-testid="input-email"]').type(b.email);
+      cy.get('.datepicker-input').type(b.date);
+      cy.get('body').click(0,0);
+      cy.get('[data-testid="select-timeslot"]').select(b.timeSlot);
 
-    cy.window().then(win => {
-      const addressInput = win.document.querySelector('input[name="address"]')
-      addressInput.value = bookingData.bookingUser.address
-      addressInput.dispatchEvent(new win.Event('input', { bubbles: true }))
-    })
+      cy.window().then(win => {
+        const addressInput = win.document.querySelector('input[name="address"]');
+        addressInput.value = b.address;
+        addressInput.dispatchEvent(new win.Event('input', { bubbles: true }));
+      });
 
-    cy.get('[data-testid="submit-booking"]').click()
-    cy.contains('Date is required.').should('not.exist')
+      cy.get('[data-testid="submit-booking"]').click();
+      cy.contains('Date is required.').should('not.exist');
+    });
   })
 
   it('sets service location when clicking Use My Current Location', () => {
@@ -81,70 +84,76 @@ describe('ServiceHub E2E - home, register, booking', () => {
   })
 
   it('shows error message when booking API fails', () => {
-    cy.visit('http://localhost:5173/book?service=ac-repair', {
-      onBeforeLoad(win) {
-        win.localStorage.setItem('token', 'valid-token')
-        win.localStorage.setItem('user', JSON.stringify({ name: bookingData.errorUser.name }))
-      }
-    })
+    cy.fixture('bookingData').then((data) => {
+      const err = data.errorUser;
+      cy.visit('http://localhost:5173/book?service=ac-repair', {
+        onBeforeLoad(win) {
+          win.localStorage.setItem('token', 'valid-token');
+          win.localStorage.setItem('user', JSON.stringify({ name: err.name }));
+        }
+      });
 
-    cy.intercept('POST', '**/api/bookings', {
-      statusCode: 500,
-      body: { message: 'Database connection failed' }
-    }).as('bookingError')
+      cy.intercept('POST', '**/api/bookings', {
+        statusCode: 500,
+        body: { message: 'Database connection failed' }
+      }).as('bookingError');
 
-    cy.get('[data-testid="input-name"]').clear().type(bookingData.errorUser.name)
-    cy.get('[data-testid="input-email"]').clear().type(bookingData.errorUser.email)
-    cy.get('.datepicker-input').type(bookingData.errorUser.date)
-    cy.get('body').click(0,0)
-    cy.get('[data-testid="select-timeslot"]').select(bookingData.errorUser.timeSlot)
+      cy.get('[data-testid="input-name"]').clear().type(err.name);
+      cy.get('[data-testid="input-email"]').clear().type(err.email);
+      cy.get('.datepicker-input').type(err.date);
+      cy.get('body').click(0,0);
+      cy.get('[data-testid="select-timeslot"]').select(err.timeSlot);
 
-    cy.window().then(win => {
-      const input = win.document.querySelector('input[name="address"]')
-      Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(
-        input,
-        bookingData.errorUser.address
-      )
-      input.dispatchEvent(new win.Event('input', { bubbles: true }))
-    })
+      cy.window().then(win => {
+        const input = win.document.querySelector('input[name="address"]');
+        Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(
+          input,
+          err.address
+        );
+        input.dispatchEvent(new win.Event('input', { bubbles: true }));
+      });
 
-    cy.get('[data-testid="submit-booking"]').click()
-    cy.wait('@bookingError', { timeout: 10000 })
-    cy.get('.error-message').should('be.visible').and('contain', 'Database connection failed')
+      cy.get('[data-testid="submit-booking"]').click();
+      cy.wait('@bookingError', { timeout: 10000 });
+      cy.get('.error-message').should('be.visible').and('contain', 'Database connection failed');
+    });
   })
 
   it('downloads a PDF confirmation after successful booking', () => {
-    cy.visit('http://localhost:5173/book?service=ac-repair', {
-      onBeforeLoad(win) {
-        win.localStorage.setItem('token', 'valid-token')
-        win.localStorage.setItem('user', JSON.stringify({ name: bookingData.pdfUser.name }))
-      }
-    })
+    cy.fixture('bookingData').then((data) => {
+      const pdf = data.pdfUser;
+      cy.visit('http://localhost:5173/book?service=ac-repair', {
+        onBeforeLoad(win) {
+          win.localStorage.setItem('token', 'valid-token');
+          win.localStorage.setItem('user', JSON.stringify({ name: pdf.name }));
+        }
+      });
 
-    cy.intercept('POST', '**/api/bookings', {
-      statusCode: 200,
-      body: { success: true, message: 'Booking saved' }
-    }).as('bookingSuccess')
+      cy.intercept('POST', '**/api/bookings', {
+        statusCode: 200,
+        body: { success: true, message: 'Booking saved' }
+      }).as('bookingSuccess');
 
-    cy.get('[data-testid="input-name"]').clear().type(bookingData.pdfUser.name)
-    cy.get('[data-testid="input-email"]').clear().type(bookingData.pdfUser.email)
-    cy.get('.datepicker-input').type(bookingData.pdfUser.date)
-    cy.get('body').click(0,0)
-    cy.get('[data-testid="select-timeslot"]').select(bookingData.pdfUser.timeSlot)
+      cy.get('[data-testid="input-name"]').clear().type(pdf.name);
+      cy.get('[data-testid="input-email"]').clear().type(pdf.email);
+      cy.get('.datepicker-input').type(pdf.date);
+      cy.get('body').click(0,0);
+      cy.get('[data-testid="select-timeslot"]').select(pdf.timeSlot);
 
-    cy.window().then(win => {
-      const input = win.document.querySelector('input[name="address"]')
-      Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(
-        input,
-        bookingData.pdfUser.address
-      )
-      input.dispatchEvent(new win.Event('input', { bubbles: true }))
-    })
+      cy.window().then(win => {
+        const input = win.document.querySelector('input[name="address"]');
+        Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(
+          input,
+          pdf.address
+        );
+        input.dispatchEvent(new win.Event('input', { bubbles: true }));
+      });
 
-    cy.get('[data-testid="submit-booking"]').click()
-    cy.wait('@bookingSuccess')
-    cy.get('[data-testid="booking-success"]', { timeout: 10000 }).should('be.visible')
-    cy.contains('Download Official PDF').click()
-    cy.readFile('cypress/downloads/booking-confirmation.pdf').should('exist')
+      cy.get('[data-testid="submit-booking"]').click();
+      cy.wait('@bookingSuccess');
+      cy.get('[data-testid="booking-success"]', { timeout: 10000 }).should('be.visible');
+      cy.contains('Download Official PDF').click();
+      cy.readFile('cypress/downloads/booking-confirmation.pdf').should('exist');
+    });
   })
 })
