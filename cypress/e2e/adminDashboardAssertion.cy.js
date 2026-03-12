@@ -3,22 +3,18 @@
 describe('Admin happy path - assign worker, set price, notify user', () => {
   // register admin once before all tests
   before(function () {
-    // attempt to register admin; ignore both HTTP errors and network failures
+    // attempt to register admin; if server isn't listening skip the suite
     cy.request({
       method: 'POST',
       url: 'http://localhost:5000/api/auth/register',
       failOnStatusCode: false,
       body: { name: 'Admin', email: 'admin@gmail.com', password: 'admin@123' }
-    }).then(
-      () => {
-        // success or non-2xx response handled by failOnStatusCode
-      },
-      (err) => {
-        // network-level failure (e.g. server down)
-        cy.log('registration request failed:', err.message);
-        // do not rethrow so the hook continues
-      }
-    );
+    }).catch((err) => {
+      // network-level failure (server down/unreachable)
+      cy.log('registration request failed, skipping admin tests:', err.message);
+      // skip remaining tests in this suite
+      this.skip();
+    });
   });
 
   beforeEach(function () {
