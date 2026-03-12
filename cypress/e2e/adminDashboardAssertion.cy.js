@@ -9,12 +9,16 @@ describe('Admin happy path - assign worker, set price, notify user', () => {
       url: 'http://localhost:5000/api/auth/register',
       failOnStatusCode: false,
       body: { name: 'Admin', email: 'admin@gmail.com', password: 'admin@123' }
-    }).catch((err) => {
-      // network-level failure (server down/unreachable)
-      cy.log('registration request failed, skipping admin tests:', err.message);
-      // skip remaining tests in this suite
-      this.skip();
-    });
+    }).then(
+      () => {
+        // request succeeded or returned non-2xx; nothing to do
+      },
+      (err) => {
+        // network-level failure (server down/unreachable)
+        cy.log('registration request failed, skipping admin tests:', err.message);
+        this.skip();
+      }
+    );
   });
 
   beforeEach(function () {
