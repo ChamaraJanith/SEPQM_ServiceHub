@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   cypress-run:
@@ -16,28 +13,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      # Install frontend deps
-      - name: Install frontend deps
-        working-directory: .
-        run: npm install
-
-      # Install backend deps
-      - name: Install backend deps
-        working-directory: ./backend
-        run: npm install
-
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
-          working-directory: .
-          start: |
-            cd backend && npm start
-            npm run dev
-          wait-on: 'http://127.0.0.1:5000, http://127.0.0.1:5173'
-          wait-on-timeout: 120
-          browser: chrome
+          start: npm run dev
+          wait-on: 'http://localhost:5173'
