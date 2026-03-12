@@ -19,11 +19,13 @@ describe('Admin happy path - assign worker, set price, notify user', () => {
     cy.get('input[name="email"]').type('admin@gmail.com');
     cy.get('input[name="password"]').type('admin@123');
     cy.get('button[type="submit"]').click();
-    cy.wait('@loginRequest', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+    // wait for login and grab token from response
+    cy.wait('@loginRequest', { timeout: 15000 }).then((interception) => {
+      expect(interception.response.statusCode).to.eq(200);
+      const token = interception.response.body.token;
+      expect(token).to.be.a('string');
 
-    // create a fresh booking via API each time
-    cy.window().then((win) => {
-      const token = win.localStorage.getItem('token');
+      // create a fresh booking via API each time using the token
       cy.request({
         method: 'POST',
         url: 'http://localhost:5000/api/bookings',
