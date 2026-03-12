@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   cypress-run:
@@ -13,8 +16,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      # Run backend + frontend together
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
-          start: npm run dev
-          wait-on: 'http://localhost:5173'
+          # start both servers in parallel
+          start: |
+            npm run server
+            npm run dev
+          # wait until both API and UI are up
+          wait-on: 'http://127.0.0.1:5000, http://127.0.0.1:5173'
+          wait-on-timeout: 120
+          browser: chrome
